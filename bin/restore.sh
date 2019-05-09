@@ -8,6 +8,7 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 ASSET_DIR=./assets
+BACKUP_DIR=/etc/kubernetes/manifests-stopped
 ETCD_VERSION=v3.3.10
 ETCD_MANIFEST=etcd-member.yaml
 ETCDCTL=$ASSET_DIR/bin/etcdctl
@@ -43,14 +44,13 @@ dl_etcdctl() {
 
 # backup current etcd-member pod manifest
 backup_manifest() {
-  echo "Backing up ${MANIFEST_DIR}/${ETCD_MANIFEST} to ${ASSET_DIR}/backup/"
-  cp ${MANIFEST_DIR}/${ETCD_MANIFEST} ${ASSET_DIR}/backup/
+  echo "Backing up ${BACKUP_DIR}/${ETCD_MANIFEST} to ${ASSET_DIR}/backup/"
+  cp ${BACKUP_DIR}/${ETCD_MANIFEST} ${ASSET_DIR}/backup/
 }
 
 # stop etcd by moving the manifest out of /etcd/kubernetes/manifests
 # we wait for all etcd containers to die.
 stop_etcd() {
-  BACKUP_DIR=/etc/kubernetes/manifests-stopped
 
   echo "Stopping etcd.."
 
@@ -59,7 +59,7 @@ stop_etcd() {
   fi
 
   if [ -e "$MANIFEST" ]; then
-    mv $MANIFEST /etc/kubernetes/manifests-stopped/
+    mv $MANIFEST $BACKUP_DIR
   fi
 
   for name in {etcd-member,etcd-metric}
@@ -111,8 +111,8 @@ start_etcd() {
 }
 
 init
-backup_manifest
 backup_data_dir
 stop_etcd
+backup_manifest
 restore_snapshot
 start_etcd
